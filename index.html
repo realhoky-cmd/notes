@@ -117,14 +117,45 @@ svg { display: block; }
 .editor-head .spacer { flex: 1; }
 .back { display: none; align-items: center; gap: 2px; height: 36px; padding: 0 6px 0 0; border: 0; background: none; color: var(--accent); font-size: 17px; cursor: pointer; }
 .back svg { width: 24px; height: 24px; }
-.editor-scroll { flex: 1; overflow-y: auto; padding: 2px 0 35vh; cursor: text; }
+.editor-scroll { position: relative; flex: 1; overflow-y: auto; padding: 2px 0 35vh; cursor: text; }
+.note-tools .sep { width: 1px; height: 20px; margin: 0 6px; background: var(--line); }
 .date { margin: 0 0 14px; text-align: center; font-size: 12px; color: var(--text-2); user-select: none; }
 .editor {
   max-width: 780px; margin: 0 auto; padding: 0 44px; min-height: 50vh;
   font-size: 15px; line-height: 1.6; white-space: pre-wrap; overflow-wrap: anywhere;
   outline: none; caret-color: var(--accent);
 }
-.editor::first-line { font-size: 1.6em; font-weight: 700; line-height: 1.45; }
+.editor > div:first-child:not(.chk):not(.img) { font-size: 1.6em; font-weight: 700; line-height: 1.45; }
+
+/* 체크리스트 */
+.editor .chk { position: relative; padding-left: 28px; }
+.editor .chk::before { content: ""; position: absolute; left: 1px; top: calc(.8em - 9px); width: 18px; height: 18px; border: 1.5px solid var(--text-2); border-radius: 50%; cursor: pointer; }
+.editor .chk.done { color: var(--text-2); }
+.editor .chk.done::before { border-color: var(--accent); background: var(--accent); }
+.editor .chk.done::after { content: ""; position: absolute; left: 7px; top: calc(.8em - 6px); width: 6px; height: 10px; border: solid var(--on-accent); border-width: 0 2px 2px 0; transform: rotate(45deg); pointer-events: none; }
+
+/* 표 */
+.editor .tbl { display: block; max-width: 100%; overflow-x: auto; margin: 8px 0; border-collapse: collapse; }
+.editor .tbl td, .editor .tbl th { min-width: 90px; padding: 5px 10px; border: 1px solid var(--line); vertical-align: top; text-align: left; font-weight: 400; overflow-wrap: break-word; }
+.editor .tbl tr:first-child > * { font-weight: 600; background: var(--list-bg); }
+.tblbar { position: absolute; z-index: 2; display: flex; gap: 2px; padding: 3px; border: 1px solid var(--line); border-radius: 9px; background: var(--editor-bg); box-shadow: 0 4px 14px rgba(0, 0, 0, .12); cursor: default; }
+.tblbar[hidden] { display: none; }
+.tblbar button { height: 28px; padding: 0 9px; border: 0; border-radius: 6px; background: transparent; font-size: 13px; white-space: nowrap; cursor: pointer; }
+.tblbar button:hover { background: var(--hover); }
+.tblbar button.danger { color: var(--danger); }
+
+/* 사진 */
+.editor .img { position: relative; width: fit-content; max-width: 100%; margin: 8px 0; line-height: 0; cursor: default; user-select: none; -webkit-user-select: none; }
+.editor .img img { display: block; max-width: 100%; height: auto; border-radius: 8px; }
+.editor .img.loading img, .editor .img.missing img { width: 240px; height: 140px; background: var(--search-bg); }
+.editor .img.missing::after { content: "사진을 불러오지 못했어요"; position: absolute; inset: 0; display: grid; place-items: center; font-size: 13px; line-height: 1.4; color: var(--text-2); }
+.editor .img.on img { outline: 2px solid var(--accent); outline-offset: 2px; }
+.editor .img .rz { position: absolute; right: -8px; bottom: -8px; display: none; width: 20px; height: 20px; border: 3px solid var(--editor-bg); border-radius: 50%; background: var(--accent); cursor: nwse-resize; touch-action: none; }
+.editor .img .x { position: absolute; top: 8px; right: 8px; display: none; width: 28px; height: 28px; padding: 0; border: 0; border-radius: 50%; background: rgba(0, 0, 0, .55); color: #fff; place-items: center; cursor: pointer; }
+.editor .img .x svg { width: 16px; height: 16px; }
+.editor .img.on .rz { display: block; }
+.editor .img.on .x { display: grid; }
+@media (hover: hover) { .editor .img:hover .rz { display: block; } }
 .empty { position: absolute; inset: 52px 0 0; display: grid; place-items: center; color: var(--text-2); font-size: 15px; user-select: none; }
 #app.has-note .empty { display: none; }
 #app:not(.has-note) .editor-scroll, #app:not(.has-note) .note-tools { visibility: hidden; }
@@ -186,6 +217,8 @@ dialog input:focus { border-color: var(--accent); }
   .back { display: flex; }
   .editor-scroll { padding-bottom: 45vh; }
   .editor { padding: 0 20px; font-size: 17px; line-height: 1.55; }
+  .editor .img .rz { width: 26px; height: 26px; right: -10px; bottom: -10px; }
+  .note-tools .sep { margin: 0 2px; }
   .empty { display: none; }
 }
 </style>
@@ -214,7 +247,11 @@ dialog input:focus { border-color: var(--accent); }
     <header class="editor-head">
       <button id="backBtn" class="back" type="button"><span data-icon="back"></span>메모</button>
       <span class="spacer"></span>
-      <span class="note-tools" style="display:flex;gap:2px">
+      <span class="note-tools" style="display:flex;gap:2px;align-items:center">
+        <button id="chkBtn" class="icon-btn" type="button" aria-label="체크리스트"></button>
+        <button id="tableBtn" class="icon-btn" type="button" aria-label="표"></button>
+        <button id="imgBtn" class="icon-btn" type="button" aria-label="사진 넣기" title="사진 넣기"></button>
+        <span class="sep"></span>
         <button id="pinBtn" class="icon-btn" type="button" aria-label="고정"></button>
         <button id="deleteBtn" class="icon-btn" type="button" aria-label="삭제" title="삭제"></button>
       </span>
@@ -222,8 +259,16 @@ dialog input:focus { border-color: var(--accent); }
     <div class="editor-scroll" id="editorScroll">
       <div id="date" class="date"></div>
       <div id="editor" class="editor" spellcheck="false" aria-label="메모 내용"></div>
+      <div id="tblBar" class="tblbar" hidden>
+        <button type="button" data-t="row">+ 행</button>
+        <button type="button" data-t="col">+ 열</button>
+        <button type="button" data-t="delrow">− 행</button>
+        <button type="button" data-t="delcol">− 열</button>
+        <button type="button" data-t="del" class="danger">표 삭제</button>
+      </div>
     </div>
     <div class="empty">메모를 선택하거나 새로 만들어 보세요</div>
+    <input id="imgInput" type="file" accept="image/*" multiple hidden>
   </main>
 </div>
 
@@ -267,7 +312,11 @@ dialog input:focus { border-color: var(--accent); }
     cloud: svg(CLOUD),
     cloudOk: svg(CLOUD + '<path d="m9.4 13.6 2 2 3.6-3.7"/>'),
     cloudOff: svg(CLOUD + '<path d="M4 4l16 16"/>'),
-    sync: svg('<path d="M19.5 10.5A7.7 7.7 0 0 0 5.6 7.2M4.5 13.5a7.7 7.7 0 0 0 13.9 3.3"/><path d="M5 3.5v4h4M19 20.5v-4h-4"/>')
+    sync: svg('<path d="M19.5 10.5A7.7 7.7 0 0 0 5.6 7.2M4.5 13.5a7.7 7.7 0 0 0 13.9 3.3"/><path d="M5 3.5v4h4M19 20.5v-4h-4"/>'),
+    checklist: svg('<circle cx="6.5" cy="7" r="2.6"/><path d="m5.3 7.1.9.9 1.6-1.7"/><circle cx="6.5" cy="17" r="2.6"/><path d="M11.5 7h8.5M11.5 17h8.5"/>'),
+    table: svg('<rect x="3.5" y="5" width="17" height="14" rx="2.2"/><path d="M3.5 9.8h17M3.5 14.4h17M10.5 5v14"/>'),
+    image: svg('<rect x="3.5" y="4.5" width="17" height="15" rx="2.5"/><circle cx="9" cy="10" r="1.7"/><path d="m20.5 15.5-4.8-4.8-8.6 8.6"/>'),
+    close: svg('<path d="M7 7l10 10M17 7 7 17"/>')
   };
 
   /* ---------- 저장소 ---------- */
@@ -310,14 +359,14 @@ dialog input:focus { border-color: var(--accent); }
   $('#newBtn').title = `새로운 메모 (${newKey})`;
   searchEl.placeholder = `검색 (${isMac ? '⌘F' : 'Ctrl+F'})`;
 
-  editor.setAttribute('contenteditable', 'plaintext-only');
-  if (editor.contentEditable !== 'plaintext-only') {
-    editor.setAttribute('contenteditable', 'true');
-    editor.addEventListener('paste', (e) => {
-      e.preventDefault();
-      document.execCommand('insertText', false, (e.clipboardData || window.clipboardData).getData('text/plain'));
-    });
-  }
+  $('#chkBtn').innerHTML = ICON.checklist;
+  $('#tableBtn').innerHTML = ICON.table;
+  $('#imgBtn').innerHTML = ICON.image;
+  $('#chkBtn').title = `체크리스트 (${isMac ? '⇧⌘L' : 'Ctrl+Shift+L'})`;
+  $('#tableBtn').title = `표 (${isMac ? '⌥⌘T' : 'Ctrl+Alt+T'})`;
+
+  editor.setAttribute('contenteditable', 'true');
+  try { document.execCommand('defaultParagraphSeparator', false, 'div'); } catch (e) {}
 
   /* ---------- 유틸 ---------- */
   const esc = (s) => String(s).replace(/[&<>"']/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
@@ -345,12 +394,55 @@ dialog input:focus { border-color: var(--accent); }
     const dt = new Date(t);
     return dt.getFullYear() === new Date().getFullYear() ? `${dt.getMonth() + 1}월` : `${dt.getFullYear()}년`;
   }
+  /* ---------- 메모 형식 ----------
+   * 메모는 마크다운 글자로 저장해요. 드라이브에서 .md 파일로 열어도 읽을 수 있어요.
+   *   체크리스트  - [ ] 할 일   /   - [x] 한 일
+   *   표          | 가 | 나 |   (둘째 줄은 | --- | --- |)
+   *   사진        <img src="images/파일이름.jpg" width="320">  (사진 파일은 SimpleNotes/images 폴더)
+   */
+  const RE_CHK = /^- \[( |x|X)\] ?(.*)$/;
+  const RE_IMG = /^<img src="images\/([A-Za-z0-9_-]{1,80}\.(?:jpg|png|gif|webp))"(?: width="(\d{1,4})")?\s*\/?>$/;
+  const RE_SEP = /^\|(\s*:?-+:?\s*\|)+\s*$/;
+  const IMG_NAME = /^[A-Za-z0-9_-]{1,80}\.(?:jpg|png|gif|webp)$/;
+  const isRow = (l) => /^\|.*\|\s*$/.test(l);
+
+  function splitRow(line) {
+    const s = line.trim().replace(/^\|/, '').replace(/\|$/, '');
+    const cells = [];
+    let cur = '';
+    for (let i = 0; i < s.length; i++) {
+      if (s[i] === '\\' && s[i + 1] === '|') { cur += '|'; i++; }
+      else if (s[i] === '|') { cells.push(cur.trim()); cur = ''; }
+      else cur += s[i];
+    }
+    cells.push(cur.trim());
+    return cells;
+  }
+  const cellMd = (s) => s.replace(/\s*\n\s*/g, ' ').replace(/\|/g, '\\|').trim();
+
+  /** 목록 제목·미리보기·검색에 쓰는 글자만 뽑아요. */
+  function plainLines(md) {
+    const out = [];
+    for (const l of String(md).split('\n')) {
+      let m, s;
+      if (RE_IMG.test(l) || RE_SEP.test(l)) continue;
+      if ((m = RE_CHK.exec(l))) s = m[2];
+      else if (isRow(l)) s = splitRow(l).filter(Boolean).join('  ');
+      else s = l;
+      s = s.trim();
+      if (s) out.push(s);
+    }
+    return out;
+  }
   function summarize(text) {
-    const lines = String(text).split('\n').map((s) => s.trim()).filter(Boolean);
-    return { title: (lines[0] || '새로운 메모').slice(0, 120), preview: (lines[1] || '추가 텍스트 없음').slice(0, 160) };
+    const lines = plainLines(text);
+    const photo = /^<img src="images\//m.test(text);
+    return {
+      title: (lines[0] || (photo ? '사진' : '새로운 메모')).slice(0, 120),
+      preview: (lines[1] || (photo && lines[0] ? '사진' : '추가 텍스트 없음')).slice(0, 160)
+    };
   }
   const sortedNotes = () => Object.values(notes).filter((n) => !n.deleted).sort((a, b) => b.updated - a.updated);
-  const readEditor = () => editor.innerText.replace(/ /g, ' ');
 
   /* ---------- 목록 ---------- */
   let listFrame = 0;
@@ -359,7 +451,7 @@ dialog input:focus { border-color: var(--accent); }
   function renderList() {
     const q = searchEl.value.trim().toLowerCase();
     const all = sortedNotes();
-    const shown = q ? all.filter((n) => n.text.toLowerCase().includes(q)) : all;
+    const shown = q ? all.filter((n) => plainLines(n.text).join('\n').toLowerCase().includes(q)) : all;
     const ordered = shown.filter((n) => n.pinned).concat(shown.filter((n) => !n.pinned));
     const groups = [];
     let last = null;
@@ -385,37 +477,621 @@ dialog input:focus { border-color: var(--accent); }
     countEl.textContent = all.length ? `${all.length}개의 메모` : '';
   }
 
-  /* ---------- 편집기 ---------- */
-  let composing = false, remotePending = false;
+  /* ---------- 편집기: 마크다운 ↔ 화면 ----------
+   * 화면의 줄 하나는 편집기 바로 아래의 블록 하나예요.
+   *   <div>글자</div>, <div class="chk [done]">할 일</div>, <table class="tbl">, <div class="img">(사진)
+   */
+  let composing = false, remotePending = false, splitFrom = null, lastRange = null, selImg = null, blockLines = [];
+  const BLOCK_RE = /^(DIV|P|TABLE|H[1-6]|UL|OL|LI|BLOCKQUOTE|PRE|SECTION|ARTICLE|HEADER|FOOTER)$/;
+  const isBlockNode = (n) => !!n && n.nodeType === 1 && BLOCK_RE.test(n.nodeName);
+  const isImgBlock = (n) => !!n && n.nodeType === 1 && n.classList.contains('img');
+  const isTable = (n) => !!n && n.nodeName === 'TABLE';
+  const isSolid = (n) => isImgBlock(n) || isTable(n);
+  const fromHtml = (html) => { const t = document.createElement('template'); t.innerHTML = html; return t.content.firstChild; };
+  const newLine = (cls) => fromHtml(`<div${cls ? ` class="${cls}"` : ''}><br></div>`);
+  function newCell() { const td = document.createElement('td'); td.appendChild(document.createElement('br')); return td; }
+  function newRow(cols) { const tr = document.createElement('tr'); for (let i = 0; i < cols; i++) tr.appendChild(newCell()); return tr; }
+  const colsOf = (table) => Math.max(1, ...[...table.rows].map((r) => r.cells.length));
 
-  function caretOffset() {
+  const imgHtml = (name, w) => `<div class="img" contenteditable="false" data-src="${esc(name)}"${w ? ` data-w="${w}"` : ''}>` +
+    `<img alt="" draggable="false"${w ? ` style="width:${w}px"` : ''}><span class="rz" aria-hidden="true"></span>` +
+    `<button type="button" class="x" tabindex="-1" aria-label="사진 삭제">${ICON.close}</button></div>`;
+  function tableHtml(rows) {
+    const cols = Math.max(1, ...rows.map((r) => r.length));
+    return '<table class="tbl"><tbody>' + rows.map((r) => '<tr>' +
+      Array.from({ length: cols }, (_, i) => `<td>${esc(r[i] || '') || '<br>'}</td>`).join('') + '</tr>').join('') + '</tbody></table>';
+  }
+  function mdToHtml(md) {
+    const lines = String(md).split('\n');
+    const kinds = [], starts = [];
+    let html = '';
+    for (let i = 0; i < lines.length; i++) {
+      const l = lines[i];
+      let m;
+      starts.push(i);
+      if (isRow(l) && i + 1 < lines.length && RE_SEP.test(lines[i + 1])) {
+        const rows = [splitRow(l)];
+        i += 2;
+        while (i < lines.length && isRow(lines[i])) rows.push(splitRow(lines[i++]));
+        i--;
+        html += tableHtml(rows); kinds.push('b');
+      } else if ((m = RE_IMG.exec(l))) {
+        html += imgHtml(m[1], m[2]); kinds.push('b');
+      } else if ((m = RE_CHK.exec(l))) {
+        html += `<div class="chk${m[1] === ' ' ? '' : ' done'}">${esc(m[2]) || '<br>'}</div>`; kinds.push('c');
+      } else {
+        html += `<div>${esc(l) || '<br>'}</div>`; kinds.push(l ? 't' : 'e');
+      }
+    }
+    // 표나 사진이 맨 끝이면 이어 쓸 수 있게 빈 줄을 하나 붙여요. (저장할 때는 빼요)
+    const k = kinds.length;
+    if (kinds[k - 1] === 'b' || (kinds[k - 1] === 'e' && kinds[k - 2] === 'b')) { html += '<div><br></div>'; starts.push(lines.length); }
+    blockLines = starts;
+    return html;
+  }
+
+  function textOf(nodes) {
+    let s = '';
+    const walk = (n) => {
+      if (n.nodeType === 3) { s += n.nodeValue; return; }
+      if (n.nodeType !== 1 || isImgBlock(n)) return;
+      if (n.nodeName === 'BR') { s += '\n'; return; }
+      const blk = isBlockNode(n) || n.nodeName === 'TR';
+      if (blk && s && !s.endsWith('\n')) s += '\n';
+      for (const c of n.childNodes) walk(c);
+      if (blk && s && !s.endsWith('\n')) s += '\n';
+    };
+    nodes.forEach(walk);
+    s = s.replace(/ /g, ' ').replace(/​/g, '');
+    return s.endsWith('\n') ? s.slice(0, -1) : s;
+  }
+  function tableMd(t) {
+    const rows = [...t.rows].map((tr) => [...tr.cells].map((td) => cellMd(textOf([td]))));
+    if (!rows.length) return [];
+    const cols = Math.max(1, ...rows.map((r) => r.length));
+    const line = (r) => '| ' + Array.from({ length: cols }, (_, i) => r[i] || '').join(' | ') + ' |';
+    return [line(rows[0]), '|' + ' --- |'.repeat(cols), ...rows.slice(1).map(line)];
+  }
+  function imgMd(el) {
+    const name = el.dataset.src || '';
+    if (!IMG_NAME.test(name)) return null;
+    const w = /^\d{1,4}$/.test(el.dataset.w || '') ? el.dataset.w : '';
+    return `<img src="images/${name}"${w ? ` width="${w}"` : ''}>`;
+  }
+  function serialize(root) {
+    const out = [];
+    let run = [];
+    const flush = () => {
+      if (run.some((n) => n.nodeName === 'BR' || n.textContent)) out.push({ k: 't', md: textOf(run).split('\n') });
+      run = [];
+    };
+    for (const n of root.childNodes) {
+      if (!isBlockNode(n)) { if (n.nodeType === 1 || n.nodeType === 3) run.push(n); continue; }
+      flush();
+      if (isTable(n)) out.push({ k: 'b', md: tableMd(n) });
+      else if (isImgBlock(n)) { const s = imgMd(n); if (s) out.push({ k: 'b', md: [s] }); }
+      else {
+        const lines = textOf([n]).split('\n');
+        if (n.classList.contains('chk')) {
+          out.push({ k: 'c', md: [`- [${n.classList.contains('done') ? 'x' : ' '}] ${lines[0]}`] });
+          if (lines.length > 1) out.push({ k: 't', md: lines.slice(1) });
+        } else out.push({ k: 't', md: lines });
+      }
+    }
+    flush();
+    const last = out[out.length - 1], prev = out[out.length - 2];
+    if (last && prev && prev.k === 'b' && last.k === 't' && last.md.length === 1 && !last.md[0]) out.pop();
+    return out.flatMap((b) => b.md).join('\n');
+  }
+  const readEditor = () => serialize(editor);
+
+  /* ---------- 편집기: 커서 ---------- */
+  function setRange(r) { const s = getSelection(); s.removeAllRanges(); s.addRange(r); }
+  function placeCaret(el, atEnd) {
+    const r = document.createRange();
+    let n = el;
+    if (atEnd) {
+      while (n.nodeType === 1 && n.lastChild && !isImgBlock(n)) n = n.lastChild;
+      if (n.nodeType === 3) r.setStart(n, n.length);
+      else if (n.nodeName === 'BR') r.setStartBefore(n);
+      else r.setStart(el, el.childNodes.length);
+    } else {
+      while (n.nodeType === 1 && n.firstChild && !isImgBlock(n)) n = n.firstChild;
+      if (n.nodeType === 3) r.setStart(n, 0);
+      else if (n.nodeName === 'BR') r.setStartBefore(n);
+      else r.setStart(el, 0);
+    }
+    r.collapse(true);
+    setRange(r);
+  }
+  function setCaretAt(el, off) {
+    const w = document.createTreeWalker(el, NodeFilter.SHOW_TEXT);
+    let n;
+    while ((n = w.nextNode())) {
+      if (off <= n.length) { const r = document.createRange(); r.setStart(n, off); r.collapse(true); setRange(r); return; }
+      off -= n.length;
+    }
+    placeCaret(el, true);
+  }
+  function topBlock(n) { while (n && n.parentNode !== editor) n = n.parentNode; return n || null; }
+  function caretCtx() {
+    const sel = getSelection();
+    if (!sel.rangeCount || !editor.contains(sel.anchorNode)) return null;
+    const node = sel.anchorNode;
+    const el = node.nodeType === 1 ? node : node.parentNode;
+    const cell = el.closest('td, th');
+    return { range: sel.getRangeAt(0), block: node === editor ? null : topBlock(node), cell: cell && editor.contains(cell) ? cell : null };
+  }
+  function caretAtStart(el, range) {
+    if (!textOf([el])) return true;
+    try { const r = document.createRange(); r.selectNodeContents(el); r.setEnd(range.startContainer, range.startOffset); return !r.toString(); }
+    catch (e) { return false; }
+  }
+  function caretAtEnd(el, range) {
+    try { const r = document.createRange(); r.selectNodeContents(el); r.setStart(range.endContainer, range.endOffset); return !r.toString(); }
+    catch (e) { return false; }
+  }
+  function saveCaret() {
+    const sel = getSelection();
+    if (!sel.rangeCount || !editor.contains(sel.anchorNode)) return null;
+    const b = sel.anchorNode === editor ? editor.children[Math.min(sel.anchorOffset, editor.children.length - 1)] : topBlock(sel.anchorNode);
+    if (!b) return null;
+    const r = document.createRange();
+    r.selectNodeContents(b);
+    try { r.setEnd(sel.anchorNode, sel.anchorOffset); } catch (e) {}
+    return { i: Math.max(0, [...editor.children].indexOf(b)), off: r.toString().length };
+  }
+  function restoreCaret(c) {
+    let b = editor.children[Math.min(c.i, editor.children.length - 1)];
+    if (isImgBlock(b)) b = b.nextElementSibling || b.previousElementSibling;
+    if (b && !isImgBlock(b)) setCaretAt(b, c.off);
+  }
+  /** 커서가 있는 줄 번호(마크다운 기준). 붙여 넣은 뒤 다시 그릴 때 써요. */
+  function caretLine() {
     const sel = getSelection();
     if (!sel.rangeCount || !editor.contains(sel.anchorNode)) return null;
     const r = document.createRange();
-    r.selectNodeContents(editor);
+    r.setStart(editor, 0);
     r.setEnd(sel.anchorNode, sel.anchorOffset);
-    return r.toString().length;
-  }
-  function setEditorText(text, caret) {
-    editor.textContent = text;
-    if (caret == null) return;
-    const node = editor.firstChild;
-    const r = document.createRange();
-    if (node) r.setStart(node, Math.min(caret, node.length)); else r.setStart(editor, 0);
-    r.collapse(true);
-    const sel = getSelection();
-    sel.removeAllRanges();
-    sel.addRange(r);
+    const box = document.createElement('div');
+    box.appendChild(r.cloneContents());
+    return serialize(box).split('\n').length - 1;
   }
   function focusEditorEnd() {
     editor.focus();
-    const r = document.createRange();
-    r.selectNodeContents(editor);
-    r.collapse(false);
-    const sel = getSelection();
-    sel.removeAllRanges();
-    sel.addRange(r);
+    let b = editor.lastElementChild;
+    if (!b || isSolid(b)) { b = newLine(); editor.appendChild(b); }
+    placeCaret(b, true);
   }
+  /** 버튼을 누르느라 커서가 편집기를 벗어났으면 마지막 위치로 돌려놔요. */
+  function restoreLastRange() {
+    const sel = getSelection();
+    if (document.activeElement === editor && sel.rangeCount && editor.contains(sel.anchorNode)) return;
+    editor.focus({ preventScroll: true });
+    if (lastRange && editor.contains(lastRange.startContainer)) setRange(lastRange);
+    else focusEditorEnd();
+  }
+
+  /* ---------- 편집기: 정리 ---------- */
+  const UNWRAP = 'span, font, b, i, u, s, strong, em, strike, a, mark, small, big, sub, sup, code';
+  /** 브라우저가 끼워 넣는 서식 태그를 지우고, 맨 바깥 글자를 줄로 감싸요. */
+  function normalize() {
+    if (composing) return;
+    const sel = getSelection();
+    const keep = sel.rangeCount && editor.contains(sel.anchorNode) ? [sel.anchorNode, sel.anchorOffset] : null;
+    let moved = false, lastRun = null;
+    for (const el of editor.querySelectorAll(UNWRAP)) {
+      if (el.closest('.img')) continue;
+      el.replaceWith(...el.childNodes);
+      moved = true;
+    }
+    for (const el of editor.querySelectorAll('[style]')) if (!el.closest('.img')) el.removeAttribute('style');
+    let run = null;
+    for (const n of [...editor.childNodes]) {
+      if (isBlockNode(n)) { run = null; continue; }
+      if (n.nodeType !== 1 && n.nodeType !== 3) { n.remove(); continue; }
+      if (n.nodeType === 3 && !n.length && !(keep && keep[0] === n)) { n.remove(); continue; }
+      if (!run) { run = document.createElement('div'); editor.insertBefore(run, n); lastRun = run; }
+      run.appendChild(n);
+      moved = true;
+    }
+    for (const el of editor.querySelectorAll('div:empty, td:empty, th:empty')) if (!el.closest('.img')) el.appendChild(document.createElement('br'));
+    if (!editor.firstElementChild) { editor.innerHTML = '<div><br></div>'; placeCaret(editor.firstChild, false); return; }
+    if (!moved || !keep) return;
+    if (keep[0] === editor && lastRun) placeCaret(lastRun, true);
+    else if (keep[0].isConnected && editor.contains(keep[0])) {
+      try { sel.collapse(keep[0], Math.min(keep[1], keep[0].nodeType === 3 ? keep[0].length : keep[0].childNodes.length)); } catch (e) {}
+    }
+  }
+  /** 엔터로 줄이 나뉜 뒤 새 줄의 종류를 맞춰요. 체크리스트에서 나눈 줄은 체크 안 된 체크리스트가 돼요. */
+  function fixSplit() {
+    const sf = splitFrom;
+    splitFrom = null;
+    if (!sf || !sf.isConnected) return;
+    const ctx = caretCtx();
+    const nb = ctx && ctx.block;
+    if (!nb || isSolid(nb)) return;
+    const chk = sf.classList.contains('chk');
+    if (nb === sf) {
+      const prev = sf.previousElementSibling;
+      if (chk && prev && prev.classList.contains('chk') && !textOf([prev])) prev.className = 'chk';
+      return;
+    }
+    nb.className = chk ? 'chk' : '';
+  }
+  function commit() {
+    const n = notes[currentId];
+    if (!n) return;
+    const t = readEditor();
+    if (t === n.text) return;
+    n.text = t;
+    n.updated = Date.now();
+    n.v = (n.v || 0) + 1;
+    n.dirty = true;
+    renderMeta(n);
+    renderListSoon();
+    saveSoon();
+    scheduleSync(1500);
+  }
+  function paint(md) {
+    selImg = null; splitFrom = null; lastRange = null;
+    editor.innerHTML = mdToHtml(md);
+    hydrateImages();
+    updateTableBar();
+  }
+
+  /* ---------- 편집기: 체크리스트 ---------- */
+  const RE_CHK_SHORTCUT = /^\s*(?:-\s*)?\[\s?\] $/;
+  /** 줄 맨 앞에서 [] 다음에 스페이스를 치면 체크리스트로 바꿔요. 입력이 끝난 뒤(한글 조합 포함) 확인해요. */
+  function chkShortcut() {
+    const ctx = caretCtx();
+    if (!ctx || ctx.cell || !ctx.range.collapsed) return false;
+    const b = ctx.block;
+    if (!b || isSolid(b) || b.classList.contains('chk')) return false;
+    const r = document.createRange();
+    r.selectNodeContents(b);
+    try { r.setEnd(ctx.range.startContainer, ctx.range.startOffset); } catch (e) { return false; }
+    if (!RE_CHK_SHORTCUT.test(r.toString().replace(/ /g, ' '))) return false;
+    r.deleteContents();
+    b.className = 'chk';
+    if (!textOf([b])) b.innerHTML = '<br>';
+    placeCaret(b, false);
+    return true;
+  }
+  function toggleChecklist() {
+    if (!currentId) return;
+    restoreLastRange();
+    const ctx = caretCtx();
+    if (!ctx || ctx.cell) return;
+    const blocks = [...editor.children].filter((b) => !isSolid(b) && ctx.range.intersectsNode(b));
+    if (!blocks.length && ctx.block && !isSolid(ctx.block)) blocks.push(ctx.block);
+    if (!blocks.length) return;
+    const allChk = blocks.every((b) => b.classList.contains('chk'));
+    for (const b of blocks) if (allChk) b.className = ''; else if (!b.classList.contains('chk')) b.className = 'chk';
+    commit();
+  }
+  const CHK_HIT = 30;
+  function chkAt(target, x) {
+    const c = target && target.closest ? target.closest('.chk') : null;
+    if (!c || !editor.contains(c)) return null;
+    const dx = x - c.getBoundingClientRect().left;
+    return dx >= -4 && dx < CHK_HIT ? c : null;
+  }
+  function toggleChk(c) { c.classList.toggle('done'); commit(); }
+
+  /* ---------- 편집기: 표 ---------- */
+  const tblBar = $('#tblBar');
+  let barCell = null, barHideTimer = null;
+  function updateTableBar() {
+    clearTimeout(barHideTimer);
+    const sel = getSelection();
+    let td = null;
+    if (document.activeElement === editor && sel.rangeCount && editor.contains(sel.anchorNode)) {
+      const n = sel.anchorNode;
+      td = (n.nodeType === 1 ? n : n.parentNode).closest('td, th');
+      if (td && !editor.contains(td)) td = null;
+    }
+    if (!td) { tblBar.hidden = true; return; }
+    barCell = td;
+    const table = td.closest('table');
+    tblBar.hidden = false;
+    tblBar.style.left = table.offsetLeft + 'px';
+    tblBar.style.top = (table.offsetTop + table.offsetHeight + 6) + 'px';
+  }
+  function insertTable() {
+    if (!currentId) return;
+    const t = fromHtml(tableHtml([['', ''], ['', '']]));
+    insertSolid(t, false);
+    placeCaret(t.rows[0].cells[0], false);
+    commit();
+    updateTableBar();
+  }
+  function removeTable(t) {
+    const next = t.nextElementSibling, prev = t.previousElementSibling;
+    t.remove();
+    editor.focus({ preventScroll: true });
+    if (next && !isSolid(next)) placeCaret(next, false);
+    else if (prev && !isSolid(prev)) placeCaret(prev, true);
+    else { const l = newLine(); editor.appendChild(l); placeCaret(l, false); }
+    commit();
+    updateTableBar();
+  }
+  function tableAct(kind) {
+    const td = barCell;
+    if (!td || !td.isConnected) return;
+    const tr = td.parentNode, table = tr.closest('table'), c = td.cellIndex, cols = colsOf(table);
+    let target = null;
+    if (kind === 'del') return removeTable(table);
+    if (kind === 'row') { const nr = newRow(cols); tr.after(nr); target = nr.cells[Math.min(c, cols - 1)]; }
+    else if (kind === 'col') {
+      for (const r of table.rows) { const cell = newCell(); if (r.cells[c]) r.cells[c].after(cell); else r.appendChild(cell); }
+      target = tr.cells[c + 1];
+    } else if (kind === 'delrow') {
+      if (table.rows.length <= 1) return removeTable(table);
+      const other = tr.nextElementSibling || tr.previousElementSibling;
+      tr.remove();
+      target = other.cells[Math.min(c, other.cells.length - 1)];
+    } else if (kind === 'delcol') {
+      if (cols <= 1) return removeTable(table);
+      for (const r of [...table.rows]) if (r.cells[c]) r.cells[c].remove();
+      target = tr.cells[Math.min(c, tr.cells.length - 1)];
+    }
+    editor.focus({ preventScroll: true });
+    if (target) placeCaret(target, true);
+    commit();
+    updateTableBar();
+  }
+  /** 표 안에서 엔터: 아래 칸으로. 마지막 줄이면 줄을 늘리고, 비어 있는 마지막 줄이면 표 밖으로 나가요. */
+  function cellDown(td) {
+    const tr = td.parentNode, table = tr.closest('table'), c = td.cellIndex;
+    let next = tr.nextElementSibling;
+    if (!next) {
+      if (table.rows.length > 2 && ![...tr.cells].some((x) => textOf([x]))) {
+        tr.remove();
+        let after = table.nextElementSibling;
+        if (!after || isSolid(after)) { after = newLine(); table.after(after); }
+        placeCaret(after, false);
+        commit();
+        updateTableBar();
+        return;
+      }
+      next = newRow(colsOf(table));
+      tr.after(next);
+      commit();
+    }
+    placeCaret(next.cells[Math.min(c, next.cells.length - 1)], true);
+    updateTableBar();
+  }
+
+  /** 커서 자리에 표나 사진 블록을 넣어요. 줄 중간이면 줄을 둘로 나눠요. */
+  function insertSolid(el, lineAfter) {
+    restoreLastRange();
+    selectImg(null);
+    const ctx = caretCtx();
+    let b = ctx && (ctx.cell ? ctx.cell.closest('table') : ctx.block);
+    if (b && b.parentNode !== editor) b = topBlock(b);
+    let atEnd = false;
+    if (!b) { const last = editor.lastElementChild; if (last) last.after(el); else editor.appendChild(el); atEnd = true; }
+    else if (isSolid(b)) { b.after(el); atEnd = true; }
+    else if (!textOf([b]) && !b.classList.contains('chk')) b.before(el);
+    else if (caretAtEnd(b, ctx.range)) { b.after(el); atEnd = true; }
+    else if (caretAtStart(b, ctx.range)) b.before(el);
+    else {
+      const r = document.createRange();
+      r.setStart(ctx.range.endContainer, ctx.range.endOffset);
+      r.setEnd(b, b.childNodes.length);
+      const nb = b.cloneNode(false);
+      nb.appendChild(r.extractContents());
+      b.after(nb);
+      b.after(el);
+    }
+    const next = el.nextElementSibling;
+    if (!next || isSolid(next) || (atEnd && lineAfter)) el.after(newLine());
+    normalize();
+  }
+
+  /* ---------- 편집기: 사진 ---------- */
+  const imgUrls = new Map(), imgMem = new Map(), imgLoading = new Map();
+  const imgPending = new Set(store.get('imgPending', []));
+  const savePending = () => store.set('imgPending', [...imgPending]);
+  const MIME = { jpg: 'image/jpeg', png: 'image/png', gif: 'image/gif', webp: 'image/webp' };
+  const mimeOf = (name) => MIME[name.split('.').pop()] || 'image/jpeg';
+
+  let idbP = null;
+  function idbOpen() {
+    if (!idbP) {
+      idbP = new Promise((res, rej) => {
+        if (!window.indexedDB) return rej(new Error('no idb'));
+        const r = indexedDB.open('sn-images' + (TEST ? '.' + window.name : ''), 1);
+        r.onupgradeneeded = () => r.result.createObjectStore('img');
+        r.onsuccess = () => res(r.result);
+        r.onerror = () => rej(r.error);
+        r.onblocked = () => rej(new Error('blocked'));
+      }).catch(() => null);
+    }
+    return idbP;
+  }
+  async function imgGet(name) {
+    if (imgMem.has(name)) return imgMem.get(name);
+    const db = await idbOpen();
+    if (!db) return null;
+    return new Promise((res) => {
+      try {
+        const q = db.transaction('img').objectStore('img').get(name);
+        q.onsuccess = () => res(q.result || null);
+        q.onerror = () => res(null);
+      } catch (e) { res(null); }
+    });
+  }
+  async function imgPut(name, rec) {
+    const db = await idbOpen();
+    if (!db) { imgMem.set(name, rec); return; }
+    await new Promise((res) => {
+      try {
+        const t = db.transaction('img', 'readwrite');
+        t.objectStore('img').put(rec, name);
+        t.oncomplete = res;
+        t.onerror = t.onabort = () => { imgMem.set(name, rec); res(); };
+      } catch (e) { imgMem.set(name, rec); res(); }
+    });
+  }
+  function bufToB64(buf) {
+    const bytes = new Uint8Array(buf);
+    let s = '';
+    for (let i = 0; i < bytes.length; i += 0x8000) s += String.fromCharCode.apply(null, bytes.subarray(i, i + 0x8000));
+    return btoa(s);
+  }
+  function b64ToBuf(b64) {
+    const s = atob(b64);
+    const a = new Uint8Array(s.length);
+    for (let i = 0; i < s.length; i++) a[i] = s.charCodeAt(i);
+    return a.buffer;
+  }
+  /** 이 기기에 없으면 서버(드라이브)에서 받아 와서 저장해 둬요. */
+  function imageUrl(name) {
+    if (imgUrls.has(name)) return Promise.resolve(imgUrls.get(name));
+    if (imgLoading.has(name)) return imgLoading.get(name);
+    const p = (async () => {
+      let rec = await imgGet(name);
+      if (!rec && cfg.url && !authFailed) {
+        try {
+          const res = await post({ secret: cfg.secret, op: 'img_get', name });
+          if (res && res.ok && res.name === name && res.data) {
+            rec = { buf: b64ToBuf(res.data), type: res.type || mimeOf(name) };
+            await imgPut(name, rec);
+          }
+        } catch (e) {}
+      }
+      if (!rec) return null;
+      const url = URL.createObjectURL(new Blob([rec.buf], { type: rec.type || mimeOf(name) }));
+      imgUrls.set(name, url);
+      return url;
+    })();
+    imgLoading.set(name, p);
+    p.finally(() => imgLoading.delete(name));
+    return p;
+  }
+  function hydrateImages() {
+    for (const box of editor.querySelectorAll('.img')) {
+      const img = box.querySelector('img');
+      const name = box.dataset.src;
+      if (!img || img.getAttribute('src') || !IMG_NAME.test(name || '')) continue;
+      if (!box.classList.contains('missing')) box.classList.add('loading');
+      imageUrl(name).then((url) => {
+        box.classList.remove('loading');
+        if (url) { img.src = url; box.classList.remove('missing'); } else box.classList.add('missing');
+      });
+    }
+  }
+  function loadImg(blob) {
+    return new Promise((res, rej) => {
+      const url = URL.createObjectURL(blob);
+      const im = new Image();
+      im.onload = () => res({ im, url });
+      im.onerror = () => { URL.revokeObjectURL(url); rej(new Error('image')); };
+      im.src = url;
+    });
+  }
+  /** 큰 사진은 긴 변 1600px로 줄이고 JPEG로 바꿔서 드라이브와 동기화 부담을 줄여요. */
+  async function prepareImage(file) {
+    const { im, url } = await loadImg(file);
+    try {
+      const w = im.naturalWidth, h = im.naturalHeight;
+      const scale = Math.min(1, 1600 / Math.max(w, h));
+      const ext = { 'image/png': 'png', 'image/jpeg': 'jpg', 'image/gif': 'gif', 'image/webp': 'webp' }[file.type];
+      if (ext && scale === 1 && file.size <= 600 * 1024) return { blob: file, ext };
+      const c = document.createElement('canvas');
+      c.width = Math.max(1, Math.round(w * scale));
+      c.height = Math.max(1, Math.round(h * scale));
+      const g = c.getContext('2d');
+      g.fillStyle = '#fff';
+      g.fillRect(0, 0, c.width, c.height);
+      g.drawImage(im, 0, 0, c.width, c.height);
+      const blob = await new Promise((r) => c.toBlob(r, 'image/jpeg', 0.85));
+      if (!blob) throw new Error('encode');
+      return { blob, ext: 'jpg' };
+    } finally {
+      URL.revokeObjectURL(url);
+    }
+  }
+  async function addImages(files) {
+    if (!currentId) return;
+    for (const file of files) {
+      const box = fromHtml(imgHtml('', null));
+      box.classList.add('loading');
+      insertSolid(box, true);
+      placeCaret(box.nextElementSibling, false);
+      try {
+        const { blob, ext } = await prepareImage(file);
+        const name = 'i' + Date.now().toString(36) + Math.random().toString(36).slice(2, 8) + '.' + ext;
+        const type = blob.type || MIME[ext];
+        await imgPut(name, { buf: await blob.arrayBuffer(), type });
+        imgUrls.set(name, URL.createObjectURL(blob));
+        imgPending.add(name);
+        savePending();
+        if (!box.isConnected) continue;
+        box.dataset.src = name;
+        box.querySelector('img').src = imgUrls.get(name);
+        box.classList.remove('loading');
+        commit();
+        scheduleSync(800);
+      } catch (e) {
+        if (box.isConnected) { box.remove(); commit(); }
+        toast('사진을 넣지 못했어요');
+      }
+    }
+  }
+  function selectImg(el) {
+    if (selImg === el) return;
+    if (selImg) selImg.classList.remove('on');
+    selImg = el && el.isConnected ? el : null;
+    if (selImg) selImg.classList.add('on');
+  }
+  function removeImg(box) {
+    const next = box.nextElementSibling, prev = box.previousElementSibling;
+    if (selImg === box) selImg = null;
+    box.remove();
+    editor.focus({ preventScroll: true });
+    if (next && !isSolid(next)) placeCaret(next, false);
+    else if (prev && !isSolid(prev)) placeCaret(prev, true);
+    else { const l = newLine(); if (next) next.before(l); else editor.appendChild(l); placeCaret(l, false); }
+    commit();
+  }
+
+  /* ---------- 편집기: 붙여 넣기 ---------- */
+  function insertPlain(text) {
+    text = text.replace(/\r\n?/g, '\n');
+    const ctx = caretCtx();
+    const inCell = !!(ctx && ctx.cell);
+    if (inCell) text = text.replace(/\s*\n\s*/g, ' ');
+    document.execCommand('insertText', false, text);
+    if (!inCell && text.includes('\n')) {
+      // 여러 줄을 붙여 넣으면 체크리스트·표 모양이 바로 보이도록 다시 그려요.
+      const line = caretLine();
+      commit();
+      const n = notes[currentId];
+      if (!n) return;
+      paint(n.text);
+      if (line == null) return;
+      let i = 0;
+      while (i + 1 < blockLines.length && blockLines[i + 1] <= line) i++;
+      const b = editor.children[i];
+      if (!b) return;
+      if (isTable(b)) { const cells = b.querySelectorAll('td, th'); placeCaret(cells[cells.length - 1], true); }
+      else if (isImgBlock(b)) { const nx = b.nextElementSibling; if (nx && !isSolid(nx)) placeCaret(nx, false); }
+      else placeCaret(b, true);
+    }
+  }
+  function caretFromPoint(x, y) {
+    let r = null;
+    if (document.caretRangeFromPoint) r = document.caretRangeFromPoint(x, y);
+    else if (document.caretPositionFromPoint) {
+      const p = document.caretPositionFromPoint(x, y);
+      if (p) { r = document.createRange(); r.setStart(p.offsetNode, p.offset); }
+    }
+    if (r && editor.contains(r.startContainer)) { editor.focus({ preventScroll: true }); r.collapse(true); setRange(r); }
+  }
+
   function renderMeta(n) {
     dateEl.textContent = fmtFull.format(n.updated);
     pinBtn.classList.toggle('on', !!n.pinned);
@@ -426,11 +1102,13 @@ dialog input:focus { border-color: var(--accent); }
     const n = currentId && notes[currentId];
     app.classList.toggle('has-note', !!n);
     remotePending = false;
-    if (!n) { editor.textContent = ''; editor.dataset.id = ''; dateEl.textContent = ''; return; }
+    if (!n) { paint(''); editor.innerHTML = ''; editor.dataset.id = ''; dateEl.textContent = ''; return; }
     const focused = document.activeElement === editor;
     if (editor.dataset.id !== n.id || readEditor() !== n.text) {
-      setEditorText(n.text, focused && editor.dataset.id === n.id ? caretOffset() : null);
+      const keep = focused && editor.dataset.id === n.id ? saveCaret() : null;
+      paint(n.text);
       editor.dataset.id = n.id;
+      if (keep) restoreCaret(keep);
     }
     renderMeta(n);
   }
@@ -441,22 +1119,204 @@ dialog input:focus { border-color: var(--accent); }
     renderEditor();
   }
 
-  editor.addEventListener('compositionstart', () => { composing = true; });
-  editor.addEventListener('compositionend', () => { composing = false; if (remotePending) applyRemoteToEditor(); });
-  editor.addEventListener('input', () => {
-    const n = notes[currentId];
-    if (!n) return;
-    n.text = readEditor();
-    n.updated = Date.now();
-    n.v = (n.v || 0) + 1;
-    n.dirty = true;
-    renderMeta(n);
-    renderListSoon();
-    saveSoon();
-    scheduleSync(1500);
+  editor.addEventListener('compositionstart', () => { composing = true; selectImg(null); });
+  editor.addEventListener('compositionend', () => {
+    composing = false;
+    setTimeout(() => { normalize(); chkShortcut(); commit(); if (remotePending) applyRemoteToEditor(); }, 0);
   });
+  editor.addEventListener('input', (e) => {
+    if (!composing && !e.isComposing) { normalize(); fixSplit(); chkShortcut(); }
+    commit();
+    updateTableBar();
+  });
+
+  editor.addEventListener('beforeinput', (e) => {
+    const t = e.inputType;
+    if (/^format/.test(t) || t === 'insertLink') { e.preventDefault(); return; }
+    if (t === 'deleteContentBackward' || t === 'deleteContentForward') { onDeleteKey(e, t === 'deleteContentBackward'); return; }
+    selectImg(null);
+    if (t === 'insertParagraph' || t === 'insertLineBreak') onEnter(e);
+  });
+
+  function onEnter(e) {
+    const ctx = caretCtx();
+    if (!ctx) return;
+    if (ctx.cell) { e.preventDefault(); cellDown(ctx.cell); return; }
+    const b = ctx.block;
+    if (!b || isSolid(b)) return;
+    if (ctx.range.collapsed) {
+      const text = textOf([b]);
+      // 빈 체크리스트 줄에서 엔터 → 체크리스트를 끝내요.
+      if (b.classList.contains('chk') && !text.trim()) { e.preventDefault(); b.className = ''; commit(); return; }
+    }
+    splitFrom = b;
+    if (e.inputType === 'insertLineBreak') { e.preventDefault(); document.execCommand('insertParagraph'); }
+  }
+
+  function onDeleteKey(e, back) {
+    if (selImg) { e.preventDefault(); removeImg(selImg); return; }
+    const ctx = caretCtx();
+    if (!ctx || !ctx.range.collapsed) return;
+    if (ctx.cell) {
+      // 칸끼리 합쳐지지 않게 막아요.
+      if (back ? caretAtStart(ctx.cell, ctx.range) : caretAtEnd(ctx.cell, ctx.range)) e.preventDefault();
+      return;
+    }
+    const b = ctx.block;
+    if (!b || isSolid(b)) return;
+    if (back) {
+      if (!caretAtStart(b, ctx.range)) return;
+      // 체크리스트 줄 맨 앞에서 지우기 → 일반 줄로 바꿔요.
+      if (b.classList.contains('chk')) { e.preventDefault(); b.className = ''; commit(); return; }
+      const prev = b.previousElementSibling;
+      if (!isSolid(prev)) return;
+      e.preventDefault();
+      if (!textOf([b]) && b.nextElementSibling) { b.remove(); commit(); }
+      if (isTable(prev)) { const cells = prev.querySelectorAll('td, th'); placeCaret(cells[cells.length - 1], true); }
+      else selectImg(prev);
+    } else {
+      if (!caretAtEnd(b, ctx.range)) return;
+      const next = b.nextElementSibling;
+      if (!isSolid(next)) return;
+      e.preventDefault();
+      if (isTable(next)) placeCaret(next.querySelector('td, th'), false);
+      else selectImg(next);
+    }
+  }
+
+  editor.addEventListener('keydown', (e) => {
+    if (e.key !== 'Tab' || e.isComposing || e.altKey || e.ctrlKey || e.metaKey) return;
+    const ctx = caretCtx();
+    if (!ctx || !ctx.cell) return;
+    e.preventDefault();
+    const table = ctx.cell.closest('table');
+    const cells = [...table.querySelectorAll('td, th')];
+    const i = cells.indexOf(ctx.cell) + (e.shiftKey ? -1 : 1);
+    if (i < 0) return;
+    if (i >= cells.length) {
+      const nr = newRow(colsOf(table));
+      table.rows[table.rows.length - 1].after(nr);
+      placeCaret(nr.cells[0], false);
+      commit();
+      updateTableBar();
+      return;
+    }
+    placeCaret(cells[i], true);
+  });
+
+  editor.addEventListener('paste', (e) => {
+    e.preventDefault();
+    const dt = e.clipboardData || window.clipboardData;
+    if (!dt || !currentId) return;
+    const text = dt.getData('text/plain') || '';
+    let files = [...(dt.files || [])];
+    if (!files.length && dt.items) files = [...dt.items].filter((i) => i.kind === 'file').map((i) => i.getAsFile()).filter(Boolean);
+    files = files.filter((f) => /^image\//.test(f.type));
+    // 엑셀·워드는 글자와 함께 그림도 복사해 두므로, 서식 있는 글자가 있으면 글자를 우선해요.
+    const types = [...(dt.types || [])];
+    if (files.length && (!text || !types.includes('text/html'))) { addImages(files); return; }
+    if (text) insertPlain(text);
+  });
+  const hasFiles = (e) => !!e.dataTransfer && [...e.dataTransfer.types].includes('Files');
+  editor.addEventListener('dragover', (e) => { if (hasFiles(e)) e.preventDefault(); });
+  editor.addEventListener('drop', (e) => {
+    e.preventDefault();
+    if (!currentId) return;
+    caretFromPoint(e.clientX, e.clientY);
+    const files = [...(e.dataTransfer.files || [])].filter((f) => /^image\//.test(f.type));
+    if (files.length) { addImages(files); return; }
+    const text = e.dataTransfer.getData('text/plain');
+    if (text) insertPlain(text);
+  });
+  window.addEventListener('dragover', (e) => { if (hasFiles(e)) e.preventDefault(); });
+  window.addEventListener('drop', (e) => { if (hasFiles(e)) e.preventDefault(); });
+  editor.addEventListener('dragstart', (e) => { if (e.target.closest && e.target.closest('.img')) e.preventDefault(); });
+
+  editor.addEventListener('mousedown', (e) => {
+    if (e.button !== 0) return;
+    const box = e.target.closest && e.target.closest('.img');
+    if (box && editor.contains(box)) {
+      e.preventDefault();
+      if (e.target.closest('.x')) { removeImg(box); return; }
+      if (document.activeElement !== editor) editor.focus({ preventScroll: true });
+      selectImg(box);
+      return;
+    }
+    selectImg(null);
+    const c = chkAt(e.target, e.clientX);
+    if (c) { e.preventDefault(); toggleChk(c); }
+  });
+  // 휴대폰: 체크 동그라미를 누를 때 키보드가 올라오지 않게 터치에서 바로 처리해요.
+  let touchPt = null;
+  editor.addEventListener('touchstart', (e) => {
+    const t = e.touches[0];
+    touchPt = e.touches.length === 1 ? { x: t.clientX, y: t.clientY, target: e.target } : null;
+  }, { passive: true });
+  editor.addEventListener('touchend', (e) => {
+    const p = touchPt;
+    touchPt = null;
+    if (!p) return;
+    const t = e.changedTouches[0];
+    if (Math.abs(t.clientX - p.x) > 10 || Math.abs(t.clientY - p.y) > 10) return;
+    const box = p.target.closest && p.target.closest('.img');
+    if (box && editor.contains(box)) {
+      if (p.target.closest('.rz')) return;
+      e.preventDefault();
+      if (p.target.closest('.x')) removeImg(box); else selectImg(box);
+      return;
+    }
+    const c = chkAt(p.target, p.x);
+    if (c) { e.preventDefault(); selectImg(null); toggleChk(c); }
+  });
+  // 사진 크기 조정: 오른쪽 아래 동그라미를 끌어요.
+  editor.addEventListener('pointerdown', (e) => {
+    const rz = e.target.closest && e.target.closest('.rz');
+    if (!rz || !editor.contains(rz)) return;
+    e.preventDefault();
+    const box = rz.parentNode, img = box.querySelector('img');
+    selectImg(box);
+    const cs = getComputedStyle(editor);
+    const maxW = editor.clientWidth - parseFloat(cs.paddingLeft) - parseFloat(cs.paddingRight);
+    const x0 = e.clientX, w0 = img.getBoundingClientRect().width;
+    try { rz.setPointerCapture(e.pointerId); } catch (err) {}
+    const move = (ev) => {
+      const w = Math.round(Math.max(48, Math.min(maxW, w0 + ev.clientX - x0)));
+      img.style.width = w + 'px';
+      box.dataset.w = String(w);
+    };
+    const end = () => {
+      rz.removeEventListener('pointermove', move);
+      rz.removeEventListener('pointerup', end);
+      rz.removeEventListener('pointercancel', end);
+      commit();
+    };
+    rz.addEventListener('pointermove', move);
+    rz.addEventListener('pointerup', end);
+    rz.addEventListener('pointercancel', end);
+  });
+
+  document.addEventListener('selectionchange', () => {
+    const sel = getSelection();
+    if (sel.rangeCount && editor.contains(sel.anchorNode)) lastRange = sel.getRangeAt(0).cloneRange();
+    updateTableBar();
+  });
+  editor.addEventListener('blur', () => { clearTimeout(barHideTimer); barHideTimer = setTimeout(updateTableBar, 250); });
+  tblBar.addEventListener('mousedown', (e) => e.preventDefault());
+  tblBar.addEventListener('click', (e) => { const b = e.target.closest('button'); if (b) tableAct(b.dataset.t); });
+
+  for (const id of ['#chkBtn', '#tableBtn', '#imgBtn']) $(id).addEventListener('mousedown', (e) => e.preventDefault());
+  $('#chkBtn').addEventListener('click', toggleChecklist);
+  $('#tableBtn').addEventListener('click', insertTable);
+  const imgInput = $('#imgInput');
+  $('#imgBtn').addEventListener('click', () => { if (currentId) imgInput.click(); });
+  imgInput.addEventListener('change', () => {
+    const files = [...imgInput.files];
+    imgInput.value = '';
+    if (files.length) addImages(files);
+  });
+
   $('#editorScroll').addEventListener('mousedown', (e) => {
-    if (e.target === editor || editor.contains(e.target) || !currentId) return;
+    if (e.target === editor || editor.contains(e.target) || tblBar.contains(e.target) || !currentId) return;
     e.preventDefault();
     focusEditorEnd();
   });
@@ -566,7 +1426,9 @@ dialog input:focus { border-color: var(--accent); }
     secret_not_set: '서버 코드(Code.gs)의 SECRET 값을 먼저 바꾸고 새 버전으로 배포해 주세요',
     busy: '서버가 바빠요. 잠시 후 다시 시도해요',
     bad_request: '요청을 보내지 못했어요',
-    server_error: '서버 오류가 났어요'
+    server_error: '서버 오류가 났어요',
+    server_outdated: '서버 코드(Code.gs)가 이전 버전이에요. 새 코드로 바꾸고 배포 관리에서 새 버전으로 배포해 주세요',
+    img_too_large: '사진이 너무 커요'
   };
   class SyncError extends Error { constructor(code, detail) { super(code); this.code = code; this.detail = detail; } }
 
@@ -619,20 +1481,22 @@ dialog input:focus { border-color: var(--accent); }
     setStatus('syncing');
 
     const sent = {};
-    const changes = [];
-    for (const n of Object.values(notes)) {
-      if (!n.dirty) continue;
-      if (!n.deleted && !n.rev && !n.text.trim()) continue; // 비어 있는 새 메모는 올리지 않아요.
-      if (n.deleted && !n.rev && !inflight.has(n.id)) { delete notes[n.id]; continue; }
-      sent[n.id] = n.v;
-      inflight.add(n.id);
-      changes.push(n.deleted
-        ? { id: n.id, deleted: true, updated: n.updated, base: n.rev || 0 }
-        : { id: n.id, text: n.text, updated: n.updated, pinned: !!n.pinned, base: n.rev || 0 });
-    }
-
     let ok = false;
     try {
+      // 사진을 먼저 올려야 다른 기기가 메모를 받자마자 사진도 받아 올 수 있어요.
+      const imgErr = imgPending.size ? await uploadImages() : null;
+      const changes = [];
+      for (const n of Object.values(notes)) {
+        if (!n.dirty) continue;
+        if (!n.deleted && !n.rev && !n.text.trim()) continue; // 비어 있는 새 메모는 올리지 않아요.
+        if (n.deleted && !n.rev && !inflight.has(n.id)) { delete notes[n.id]; continue; }
+        sent[n.id] = n.v;
+        inflight.add(n.id);
+        changes.push(n.deleted
+          ? { id: n.id, deleted: true, updated: n.updated, base: n.rev || 0 }
+          : { id: n.id, text: n.text, updated: n.updated, pinned: !!n.pinned, base: n.rev || 0 });
+      }
+
       const res = await post({ secret: cfg.secret, since: meta.since || 0, changes });
       if (!res || !res.ok) throw new SyncError((res && res.error) || 'bad_response', res && res.detail);
 
@@ -663,14 +1527,15 @@ dialog input:focus { border-color: var(--accent); }
 
       meta.since = res.now || meta.since;
       meta.lastSync = Date.now();
-      lastError = '';
+      lastError = imgErr ? '사진을 올리지 못했어요. ' + (ERR[imgErr.code] || ERR.server_error) : '';
       errorCount = 0;
       ok = true;
       saveNow();
       renderList();
       if (touchedCurrent) applyRemoteToEditor();
       if (conflicted) toast('다른 기기에서도 고친 메모라 이 기기 내용은 사본 메모로 저장했어요');
-      setStatus('ok');
+      hydrateImages();
+      setStatus(imgErr ? 'error' : 'ok');
     } catch (e) {
       const code = e instanceof SyncError ? e.code : 'network';
       lastError = (ERR[code] || ERR.server_error) + (e.detail ? ` (${e.detail})` : '');
@@ -686,6 +1551,29 @@ dialog input:focus { border-color: var(--accent); }
     }
   }
 
+  /** 이 기기에서 넣은 사진을 드라이브에 올려요. 연결·비밀번호 문제가 아니면 메모 동기화는 계속해요. */
+  async function uploadImages() {
+    let err = null;
+    for (const name of [...imgPending]) {
+      const rec = await imgGet(name);
+      if (!rec) { imgPending.delete(name); continue; }
+      let res;
+      try {
+        res = await post({ secret: cfg.secret, op: 'img_put', name, type: rec.type, data: bufToB64(rec.buf) });
+      } catch (e) {
+        if (!(e instanceof SyncError) || e.code === 'network') throw e;
+        err = e;
+        continue;
+      }
+      if (res && res.ok && res.saved === name) { imgPending.delete(name); continue; }
+      const code = res && res.ok ? 'server_outdated' : (res && res.error) || 'bad_response';
+      if (code === 'unauthorized' || code === 'secret_not_set' || code === 'busy') throw new SyncError(code);
+      err = new SyncError(code, res && res.detail);
+    }
+    savePending();
+    return err;
+  }
+
   syncBtn.addEventListener('click', () => {
     if (!cfg.url || status === 'error') openSettings();
     else { authFailed = false; sync(); }
@@ -693,7 +1581,7 @@ dialog input:focus { border-color: var(--accent); }
   syncText.addEventListener('click', () => { if (status === 'error' || status === 'local') openSettings(); });
 
   document.addEventListener('visibilitychange', () => {
-    if (document.visibilityState === 'hidden') { saveNow(); if (hasDirty()) sync(); }
+    if (document.visibilityState === 'hidden') { saveNow(); if (hasDirty() || imgPending.size) sync(); }
     else sync();
   });
   window.addEventListener('pagehide', saveNow);
@@ -840,7 +1728,14 @@ dialog input:focus { border-color: var(--accent); }
   });
   document.addEventListener('keydown', (e) => {
     const mod = isMac ? e.metaKey : e.ctrlKey;
-    if (mod && e.altKey && e.code === 'KeyN') { e.preventDefault(); newNote(); }
+    const ae = document.activeElement;
+    if (selImg && !dlg.open && (ae === editor || ae === document.body)) {
+      if (e.key === 'Backspace' || e.key === 'Delete') { e.preventDefault(); removeImg(selImg); return; }
+      if (e.key === 'Escape') { selectImg(null); return; }
+    }
+    if (mod && e.shiftKey && !e.altKey && e.code === 'KeyL' && currentId && !dlg.open) { e.preventDefault(); toggleChecklist(); }
+    else if (mod && e.altKey && !e.shiftKey && e.code === 'KeyT' && currentId && !dlg.open) { e.preventDefault(); insertTable(); }
+    else if (mod && e.altKey && e.code === 'KeyN') { e.preventDefault(); newNote(); }
     else if (mod && !e.altKey && !e.shiftKey && e.code === 'KeyF' && !dlg.open) { e.preventDefault(); if (isMobile()) showList(); searchEl.focus(); searchEl.select(); }
   });
   mobileMQ.addEventListener('change', () => {

@@ -1,5 +1,5 @@
 // 앱 화면을 기기에 저장해 두고 바로 열리게 해요. 메모 데이터는 여기서 다루지 않아요.
-const CACHE = 'simple-notes-v1';
+const CACHE = 'simple-notes-v2';
 const ASSETS = ['./', './index.html', './manifest.webmanifest', './icon-192.png', './icon-512.png', './icon-maskable-512.png', './apple-touch-icon.png'];
 
 self.addEventListener('install', (e) => {
